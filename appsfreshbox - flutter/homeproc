@@ -1,0 +1,84 @@
+// List _category = [
+  //   "All Category",
+  //   "Buah",
+  //   "Drinks",
+  //   "Frozen Food",
+  //   "Groceries",
+  //   "Meat",
+  //   "Others",
+  //   "Poultry",
+  //   "Sayuran",
+  //   "Seafood",
+  //   "Snacks & Cereals"
+  // ];
+
+  // List<DropdownMenuItem<String>> getDropDownMenuItems() {
+  // List<DropdownMenuItem<String>> items = new List();
+  // for (String byr in _category) {
+  // items.add(new DropdownMenuItem(
+  //     value: byr,
+  //     child: new Text(
+  //       byr,
+  //       style: TextStyle(fontSize: 13.5),
+  //     )));
+  // }
+
+  // return items;
+  // }
+  
+  // Icon Button Notification
+                            // Stack(
+                            //   children: <Widget>[
+                            //     IconButton(
+                            //       iconSize: 33.0,
+                            //       icon: Icon(
+                            //         Icons.notifications,
+                            //         color: Colors.red,
+                            //       ),
+                            //       onPressed: () {
+                            //         Navigator.of(context).pushReplacement(
+                            //             PageRouteBuilder(
+                            //                 pageBuilder: (_, __, ___) =>
+                            //                     NotificationPage(),
+                            //                 transitionDuration:
+                            //                     Duration(milliseconds: 750),
+
+                            //                 /// Set animation with opacity
+                            //                 transitionsBuilder: (_,
+                            //                     Animation<double> animation,
+                            //                     __,
+                            //                     Widget child) {
+                            //                   return Opacity(
+                            //                     opacity: animation.value,
+                            //                     child: child,
+                            //                   );
+                            //                 }));
+                            //       },
+                            //     ),
+                            //     Positioned(
+                            //       top: 3.0,
+                            //       right: 6.0,
+                            //       child: Container(
+                            //         padding: EdgeInsets.all(1.0),
+                            //         decoration: BoxDecoration(
+                            //           color: Colors.black,
+                            //           shape: BoxShape.circle,
+                            //         ),
+                            //         constraints: BoxConstraints(
+                            //           minHeight: 18.0,
+                            //           minWidth: 18.0,
+                            //         ),
+                            //         child: Center(
+                            //           child: Text(
+                            //             '0',
+                            //             textAlign: TextAlign.center,
+                            //             style: TextStyle(
+                            //                 color: Colors.white,
+                            //                 fontSize: 10.0,
+                            //                 fontWeight: FontWeight.bold),
+                            //           ),
+                            //         ),
+                            //       ),
+                            //     )
+                            //   ],
+                            // )
