@@ -1,0 +1,78 @@
+
+  // Future<void> _showSelectionImage(BuildContext context) {
+  //   return showDialog(
+  //       context: context,
+  //       builder: (BuildContext context) {
+  //         return AlertDialog(
+  //           title: Text('From where do you want to take the photo ?'),
+  //           content: SingleChildScrollView(
+  //             child: ListBody(
+  //               children: [
+  //                 GestureDetector(
+  //                   child: Text("Gallery"),
+  //                   onTap: () {
+  //                     _openGallery(context);
+  //                   },
+  //                 ),
+  //                 Padding(padding: EdgeInsets.all(8.0)),
+  //                 GestureDetector(
+  //                   child: Text("Camera"),
+  //                   onTap: () {
+  //                     _openCamera(context);
+  //                   },
+  //                 )
+  //               ],
+  //             ),
+  //           ),
+  //         );
+  //       });
+  // }
+
+  // _openCamera(BuildContext context) async {
+  //   final pickedFile = await picker.getImage(
+  //       source: ImageSource.camera, maxHeight: 1920.0, maxWidth: 1080.0);
+  //   setState(() {
+  //     _image = File(pickedFile.path);
+  //     base64Image = base64Encode(_image.readAsBytesSync());
+  //   });
+  // }
+
+  // _openGallery(BuildContext context) async {
+  //   final pickedFile = await picker.getImage(
+  //       source: ImageSource.gallery, maxHeight: 1920.0, maxWidth: 1080.0);
+  //   setState(() {
+  //     _image = File(pickedFile.path);
+  //     base64Image = base64Encode(_image.readAsBytesSync());
+  //   });
+  // }
+
+
+// RaisedButton.icon(
+//   color: Colors.red,
+//   onPressed: () {
+//     Navigator.of(context).pushReplacement(
+//         PageRouteBuilder(
+//             pageBuilder: (_, __, ___) => null,
+//             transitionDuration:
+//                 Duration(milliseconds: 750),
+//             /// Set animation with opacity
+//             transitionsBuilder: (_,
+//                 Animation<double> animation,
+//                 __,
+//                 Widget child) {
+//               return Opacity(
+//                 opacity: animation.value,
+//                 child: child,
+//               );
+//             }));
+//   },
+//   icon: Icon(
+//     Icons.camera,
+//     color: Colors.white,
+//   ),
+//   label: Text(
+//     'Upload Invoice',
+//     style: TextStyle(color: Colors.white),
+//   ),
+// ),
+
