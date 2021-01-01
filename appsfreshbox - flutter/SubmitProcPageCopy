@@ -1,0 +1,1049 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'package:appsfreshbox/Procurement/models/currency.dart';
+import 'package:appsfreshbox/Services/Services.dart';
+import 'package:appsfreshbox/SideBarPage.dart';
+import 'package:appsfreshbox/models/Datajson.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:datetime_picker_formfield/datetime_picker_formfield.dart';
+
+class SubmitProcPage extends StatefulWidget {
+  @override
+  _SubmitProcPageState createState() => _SubmitProcPageState();
+}
+
+class Debouncer {
+  final int milliseconds;
+  VoidCallback action;
+  Timer _timer;
+
+  Debouncer({this.milliseconds});
+
+  run(VoidCallback action) {
+    if (null != _timer) {
+      _timer.cancel();
+    }
+    _timer = Timer(Duration(milliseconds: milliseconds), action);
+  }
+}
+
+class _SubmitProcPageState extends State<SubmitProcPage> {
+  int getColorHexFromStr(String color) {
+    color = "FF" + color;
+    color = color.replaceAll("#", "");
+    int val = 0;
+    int len = color.length;
+    for (var i = 0; i < len; i++) {
+      int hexDgt = color.codeUnitAt(i);
+      if (hexDgt >= 48 && hexDgt <= 57) {
+        val += (hexDgt - 48) * (1 << (4 * (len - 1 - i)));
+      } else if (hexDgt >= 65 && hexDgt <= 70) {
+        val += (hexDgt - 55) * (1 << (4 * (len - 1 - i)));
+      } else if (hexDgt >= 97 && hexDgt <= 102) {
+        val += (hexDgt - 87) * (1 << (4 * (len - 1 - i)));
+      } else {
+        throw new FormatException("Error converting color");
+      }
+    }
+    return val;
+  }
+
+  @override
+  void initState() {
+    _dropDownMenuItems = getDropDownMenuItems();
+    _currentPembayaran = _dropDownMenuItems[0].value;
+    if (mounted) {
+      _getListItemProc();
+      _getDataUom();
+    }
+    super.initState();
+    autoValidate = false;
+    isSubmit = false;
+    isPost = false;
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
+  List _pembayaran = [
+    "-- Pilih ---",
+    "Transfer",
+    "Cash",
+  ];
+
+  List<DropdownMenuItem<String>> _dropDownMenuItems;
+  List<ItemProc> listItem = [];
+  List<ItemProc> filterListItem = [];
+  List<Uom> listUom = [];
+  String _currentPembayaran;
+  int selectedUom;
+  File _image;
+  Future<File> tmpImage;
+  String base64Image;
+  final picker = ImagePicker();
+  final convertMoney = NumberFormat("#,##0", "en_US");
+  TextEditingController vendorController = new TextEditingController();
+  TextEditingController filterController = new TextEditingController();
+  TextEditingController remarksController = new TextEditingController();
+  TextEditingController dateExpiredController = new TextEditingController();
+  String vendor, remarks, dateExpired;
+  final formKey = GlobalKey<FormState>();
+  bool autoValidate;
+  bool isSubmit, isPost;
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
+  DateTime selectedDate = DateTime.now();
+  final _debouncer = Debouncer(milliseconds: 500);
+
+  List<DropdownMenuItem<String>> getDropDownMenuItems() {
+    List<DropdownMenuItem<String>> items = new List();
+    for (String byr in _pembayaran) {
+      items.add(new DropdownMenuItem(value: byr, child: new Text(byr)));
+    }
+    return items;
+  }
+
+  void changedDropDownItem(String selectedCity) {
+    setState(() {
+      _currentPembayaran = selectedCity;
+      print(_currentPembayaran);
+    });
+  }
+
+  _getListItemProc() async {
+    SharedPreferences localStorage = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      final getItem = json
+          .decode(localStorage.getString('itemProc'))
+          .cast<Map<String, dynamic>>();
+      listItem =
+          getItem.map<ItemProc>((json) => ItemProc.fromJson(json)).toList();
+      filterListItem = listItem;
+      // print(json.decode(localStorage.getString('itemProc')));
+    });
+  }
+
+  _getDataUom() async {
+    var response = await Services().getDataUom();
+    if (response.statusCode == 200) {
+      if (!mounted) return;
+      setState(() {
+        final result =
+            json.decode(response.body)['data'].cast<Map<String, dynamic>>();
+        listUom = result.map<Uom>((json) => Uom.fromJson(json)).toList();
+        selectedUom = listUom[0].id;
+        // print(listUom.length);
+      });
+    }
+  }
+
+  _backBtn() async {
+    SharedPreferences localStorage = await SharedPreferences.getInstance();
+    localStorage.remove('itemProc');
+    Navigator.of(context).pop(PageRouteBuilder(
+        pageBuilder: (_, __, ___) => SideBarPage(
+              selectPage: 0,
+            ),
+        transitionDuration: Duration(milliseconds: 750),
+
+        /// Set animation with opacity
+        transitionsBuilder: (_, Animation<double> animation, __, Widget child) {
+          return Opacity(
+            opacity: animation.value,
+            child: child,
+          );
+        }));
+  }
+
+  _postBuyProc() async {
+    setState(() {
+      isSubmit = true;
+    });
+    var data = {
+      "items": filterListItem,
+      "vendor": vendorController.text,
+      "total_amount": getTotal(),
+      "file": base64Image,
+      "jenis_pembayaran": _currentPembayaran,
+      "remarks": remarksController.text
+    };
+    int emptyUom = 0;
+    filterListItem.forEach((element) {
+      if (element.uomprocid == null) {
+        emptyUom += 1;
+      }
+    });
+
+    if (emptyUom > 0) {
+      _showDialog("Please, isi uom");
+    } else if (remarksController.text == null || remarksController.text == '') {
+      _showDialog("Please, isi remakrs");
+    } else if (base64Image == null) {
+      _showDialog("Please, isi gambar");
+    } else {
+      setState(() {
+        isPost = true;
+      });
+      var response = await Services().postBuyProc(data);
+      // var body = json.decode(response.body);
+      if (response.statusCode == 200) {
+        if (!mounted) return;
+        Navigator.of(context).pop(PageRouteBuilder(
+            pageBuilder: (_, __, ___) => SideBarPage(
+                  selectPage: 0,
+                ),
+            transitionDuration: Duration(milliseconds: 750),
+
+            /// Set animation with opacity
+            transitionsBuilder:
+                (_, Animation<double> animation, __, Widget child) {
+              return Opacity(
+                opacity: animation.value,
+                child: child,
+              );
+            }));
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          await showDialog<String>(
+            context: context,
+            builder: (BuildContext context) => new AlertDialog(
+              title: new Text("Buy Item"),
+              content: new Text("Berhasil..."),
+              actions: <Widget>[
+                new FlatButton(
+                  child: new Text("Ok"),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            ),
+          );
+        });
+      } else if (response.statusCode == 401) {
+        if (!mounted) return;
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          await showDialog<String>(
+            context: context,
+            builder: (BuildContext context) => new AlertDialog(
+              title: new Text("Pemberitahuan"),
+              content: new Text("Saldo Anda Tidak Cukup\nSilakan Isi Saldo..."),
+              actions: <Widget>[
+                new FlatButton(
+                  child: new Text("Ok"),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            ),
+          );
+        });
+      }
+      // print(jsonEncode(data));
+    }
+    setState(() {
+      isSubmit = false;
+    });
+  }
+
+  onFilterChanged(String text) {
+    _debouncer.run(() {
+      setState(() {
+        filterListItem = listItem
+            .where((element) => (element.itemnamegroup
+                .toLowerCase()
+                .contains(text.toLowerCase())))
+            .toList();
+      });
+    });
+  }
+
+  Future _addImage() async {
+    final pickedFile = await picker.getImage(
+        source: ImageSource.camera, maxWidth: 1080.0, maxHeight: 1920.0);
+    setState(() {
+      if (pickedFile != null) {
+        _image = File(pickedFile.path);
+        // File fileName = File(pickedFile.path.split('/').last);
+        base64Image = base64Encode(_image.readAsBytesSync());
+        // print(base64Image);
+        print(_image);
+      }
+    });
+  }
+
+  String getTotal() {
+    int totalAmount = 0;
+    filterListItem.forEach((element) {
+      setState(() {
+        if (element.amount != null) {
+          totalAmount = totalAmount + element.amount;
+        }
+      });
+    });
+    return totalAmount.toString();
+  }
+
+  _showDialog(msg) {
+    final snackBar = SnackBar(
+      content: Text(msg),
+      duration: new Duration(seconds: 1),
+      backgroundColor: Colors.red,
+    );
+    _scaffoldKey.currentState.showSnackBar(snackBar);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    filterListItem.forEach((element) {
+      print(element.qtyproc);
+    });
+    return WillPopScope(
+      onWillPop: () => _backBtn(),
+      child: Scaffold(
+        key: _scaffoldKey,
+        appBar: AppBar(
+          title: Text('Buy Procurement'),
+          backgroundColor: Colors.red,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back),
+            onPressed: () => _backBtn(),
+          ),
+        ),
+        body: Stack(
+          children: [
+            Container(
+              color: Color(getColorHexFromStr("#fff5ea")),
+            ),
+            Column(
+              children: [
+                // Container(
+                //   padding: EdgeInsets.fromLTRB(20.0, 20.0, 20.0, 5.0),
+                //   child: Material(
+                //     borderRadius: BorderRadius.circular(7.0),
+                //     child: TextFormField(
+                //       controller: filterController,
+                //       decoration: InputDecoration(
+                //         border: OutlineInputBorder(
+                //           borderRadius: BorderRadius.circular(7.0),
+                //         ),
+                //         prefixIcon: Icon(
+                //           Icons.search,
+                //           color: Colors.black,
+                //         ),
+                //         suffixIcon: IconButton(
+                //           icon: Icon(Icons.cancel),
+                //           onPressed: () {
+                //             filterController.clear();
+                //             onFilterChanged('');
+                //           },
+                //         ),
+                //         contentPadding: EdgeInsets.only(left: 10.0, top: 15.0),
+                //         hintText: "Search Item Name",
+                //         hintStyle: TextStyle(color: Colors.grey),
+                //       ),
+                //       onFieldSubmitted: onFilterChanged,
+                //       onTap: () {
+                //         onFilterChanged('');
+                //       },
+                //     ),
+                //   ),
+                // ),
+                Flexible(
+                  child: Form(
+                    key: formKey,
+                    autovalidate: autoValidate,
+                    child: ListView(
+                      children: [
+                        filterListItem.length > 0
+                            ? ListView.builder(
+                                shrinkWrap: true,
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 20.0, vertical: 10.0),
+                                scrollDirection: Axis.vertical,
+                                physics: NeverScrollableScrollPhysics(),
+                                itemCount: filterListItem.length,
+                                itemBuilder: (context, int index) {
+                                  return Container(
+                                    padding:
+                                        EdgeInsets.symmetric(vertical: 10.0),
+                                    child: Column(
+                                      children: <Widget>[
+                                        Column(
+                                          children: [
+                                            Align(
+                                              alignment: Alignment.centerLeft,
+                                              child: Text(
+                                                filterListItem[index]
+                                                    .itemnamegroup,
+                                                style: TextStyle(
+                                                    fontFamily: "Quicksand",
+                                                    fontSize: 16.0,
+                                                    fontWeight:
+                                                        FontWeight.bold),
+                                              ),
+                                            ),
+                                            Align(
+                                              alignment: Alignment.centerLeft,
+                                              child: Text(
+                                                '${filterListItem[index].selisihqtyinventorygroup.abs()} ${filterListItem[index].uomgroupname}',
+                                                style: TextStyle(
+                                                  fontFamily: "Quicksand",
+                                                  fontSize: 14.0,
+                                                ),
+                                              ),
+                                            )
+                                          ],
+                                        ),
+                                        SizedBox(
+                                          height: 5.0,
+                                        ),
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceAround,
+                                          children: [
+                                            Flexible(
+                                              flex: 1,
+                                              child: TextFormField(
+                                                textAlign: TextAlign.left,
+                                                keyboardType:
+                                                    TextInputType.number,
+                                                decoration: InputDecoration(
+                                                  border: OutlineInputBorder(),
+                                                  hintText: 'Quantity',
+                                                ),
+                                                onChanged: (value) {
+                                                  setState(() {
+                                                    if (value == null ||
+                                                        value == '') {
+                                                      filterListItem[index]
+                                                          .qtyproc = 0;
+                                                    } else {
+                                                      filterListItem[index]
+                                                              .qtyproc =
+                                                          value.replaceAll(
+                                                              ",", ".");
+                                                    }
+                                                  });
+                                                  print("index" +
+                                                      index.toString());
+                                                  print("qty" +
+                                                      filterListItem[index]
+                                                          .qtyproc);
+                                                },
+                                                validator: (value) {
+                                                  if (value.isEmpty) {
+                                                    return "Please, isi text";
+                                                  } else {
+                                                    // setState(() {
+                                                    //   filterListItem[index]
+                                                    //           .qtyproc =
+                                                    //       value.replaceAll(
+                                                    //           ",", ".");
+                                                    // });
+                                                    return null;
+                                                  }
+                                                },
+                                              ),
+                                            ),
+                                            SizedBox(
+                                              width: 10.0,
+                                            ),
+                                            Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Align(
+                                                  alignment: Alignment.topLeft,
+                                                  child: Text(
+                                                    'Uom',
+                                                    textAlign: TextAlign.left,
+                                                    style: TextStyle(
+                                                        fontFamily: "Quicksand",
+                                                        fontSize: 16.0,
+                                                        fontWeight:
+                                                            FontWeight.bold),
+                                                  ),
+                                                ),
+                                                DropdownButton(
+                                                  hint: Text('Select Uom'),
+                                                  value: filterListItem[index]
+                                                      .uomprocid,
+                                                  isDense: true,
+                                                  onChanged: (newValue) {
+                                                    filterListItem[index]
+                                                        .uomprocid = newValue;
+                                                    setState(() {});
+                                                    print(newValue);
+                                                  },
+                                                  items: listUom
+                                                      .map((e) =>
+                                                          DropdownMenuItem(
+                                                            value: e.id,
+                                                            child: Text(e.name),
+                                                          ))
+                                                      .toList(),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                        SizedBox(
+                                          height: 10.0,
+                                        ),
+                                        filterListItem[index].categorygroup ==
+                                                    "Drinks" ||
+                                                filterListItem[index]
+                                                        .categorygroup ==
+                                                    "Frozen Food" ||
+                                                filterListItem[index]
+                                                        .categorygroup ==
+                                                    "Groceries"
+                                            ? Column(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .spaceBetween,
+                                                    children: [
+                                                      Expanded(
+                                                        child: Column(
+                                                          children: [
+                                                            Align(
+                                                              alignment: Alignment
+                                                                  .centerLeft,
+                                                              child: Text(
+                                                                'Expired Date',
+                                                                style: TextStyle(
+                                                                    fontFamily:
+                                                                        "Quicksand",
+                                                                    fontSize:
+                                                                        16.0,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .bold),
+                                                              ),
+                                                            ),
+                                                            SizedBox(
+                                                              height: 10.0,
+                                                            ),
+                                                            DateTimeField(
+                                                              decoration:
+                                                                  InputDecoration(
+                                                                border:
+                                                                    OutlineInputBorder(),
+                                                              ),
+                                                              format: DateFormat(
+                                                                  'yyyy-MM-dd'),
+                                                              onShowPicker:
+                                                                  (context,
+                                                                      currentValue) {
+                                                                return showDatePicker(
+                                                                    context:
+                                                                        context,
+                                                                    firstDate:
+                                                                        DateTime(
+                                                                            1900),
+                                                                    initialDate:
+                                                                        currentValue ??
+                                                                            DateTime
+                                                                                .now(),
+                                                                    lastDate:
+                                                                        DateTime(
+                                                                            2100));
+                                                              },
+                                                              onChanged:
+                                                                  (value) {
+                                                                setState(() {
+                                                                  if (value !=
+                                                                      null)
+                                                                    filterListItem[
+                                                                            index]
+                                                                        .dateexpired = DateFormat(
+                                                                            'yyyy-MM-dd')
+                                                                        .format(
+                                                                            value);
+                                                                  print(filterListItem[
+                                                                          index]
+                                                                      .dateexpired);
+                                                                });
+                                                              },
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                      SizedBox(
+                                                        width: 5.0,
+                                                      ),
+                                                      Expanded(
+                                                        child: Column(
+                                                          children: [
+                                                            Align(
+                                                              alignment: Alignment
+                                                                  .centerLeft,
+                                                              child: Text(
+                                                                'Amount',
+                                                                style: TextStyle(
+                                                                    fontFamily:
+                                                                        "Quicksand",
+                                                                    fontSize:
+                                                                        16.0,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .bold),
+                                                              ),
+                                                            ),
+                                                            SizedBox(
+                                                              height: 10.0,
+                                                            ),
+                                                            TextFormField(
+                                                              textAlign:
+                                                                  TextAlign
+                                                                      .left,
+                                                              keyboardType:
+                                                                  TextInputType
+                                                                      .number,
+                                                              inputFormatters: [
+                                                                WhitelistingTextInputFormatter
+                                                                    .digitsOnly,
+                                                                CurrencyFormat()
+                                                              ],
+                                                              decoration:
+                                                                  InputDecoration(
+                                                                border:
+                                                                    OutlineInputBorder(),
+                                                                hintText:
+                                                                    'Rp. 0',
+                                                              ),
+                                                              onChanged:
+                                                                  (value) {
+                                                                setState(() {
+                                                                  if (value ==
+                                                                          null ||
+                                                                      value ==
+                                                                          '') {
+                                                                    filterListItem[
+                                                                            index]
+                                                                        .amount = "0";
+                                                                  } else {
+                                                                    filterListItem[index]
+                                                                            .amount =
+                                                                        int.parse(value.replaceAll(
+                                                                            ".",
+                                                                            ""));
+                                                                  }
+                                                                });
+                                                                print(filterListItem[
+                                                                        index]
+                                                                    .amount);
+                                                              },
+                                                              validator:
+                                                                  (value) {
+                                                                if (value
+                                                                    .isEmpty) {
+                                                                  return "Please, isi text";
+                                                                } else {
+                                                                  // setState(() {
+                                                                  //   filterListItem[index]
+                                                                  //           .amount =
+                                                                  //       int.parse(value.replaceAll(
+                                                                  //           ".",
+                                                                  //           ""));
+                                                                  // });
+                                                                  return null;
+                                                                }
+                                                              },
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment.start,
+                                                    children: [
+                                                      Text(
+                                                        '* Masukkan Expired Terdekat',
+                                                        style: TextStyle(
+                                                            fontSize: 12.0,
+                                                            color: Colors.red),
+                                                      )
+                                                    ],
+                                                  )
+                                                ],
+                                              )
+                                            : Column(
+                                                children: [
+                                                  Align(
+                                                    alignment:
+                                                        Alignment.centerLeft,
+                                                    child: Text(
+                                                      'Amount',
+                                                      style: TextStyle(
+                                                          fontFamily:
+                                                              "Quicksand",
+                                                          fontSize: 16.0,
+                                                          fontWeight:
+                                                              FontWeight.bold),
+                                                    ),
+                                                  ),
+                                                  SizedBox(
+                                                    height: 10.0,
+                                                  ),
+                                                  TextFormField(
+                                                    textAlign: TextAlign.left,
+                                                    keyboardType:
+                                                        TextInputType.number,
+                                                    inputFormatters: [
+                                                      WhitelistingTextInputFormatter
+                                                          .digitsOnly,
+                                                      CurrencyFormat()
+                                                    ],
+                                                    decoration: InputDecoration(
+                                                      border:
+                                                          OutlineInputBorder(),
+                                                      hintText: 'Rp. 0',
+                                                    ),
+                                                    onChanged: (value) {
+                                                      setState(() {
+                                                        if (value == null ||
+                                                            value == '') {
+                                                          filterListItem[index]
+                                                              .amount = "0";
+                                                        } else {
+                                                          filterListItem[index]
+                                                                  .amount =
+                                                              int.parse(value
+                                                                  .replaceAll(
+                                                                      ".", ""));
+                                                        }
+                                                      });
+                                                      print(
+                                                          filterListItem[index]
+                                                              .amount);
+                                                    },
+                                                    validator: (value) {
+                                                      if (value.isEmpty) {
+                                                        return "Please, isi text";
+                                                      } else {
+                                                        // setState(() {
+                                                        //   filterListItem[index]
+                                                        //           .amount =
+                                                        //       int.parse(value
+                                                        //           .replaceAll(
+                                                        //               ".", ""));
+                                                        // });
+                                                        return null;
+                                                      }
+                                                    },
+                                                  ),
+                                                ],
+                                              ),
+                                        SizedBox(
+                                          height: 5.0,
+                                        ),
+                                        RaisedButton(
+                                          onPressed: () {
+                                            setState(() {
+                                              filterListItem.removeWhere(
+                                                  (element) =>
+                                                      element.itemidgroup ==
+                                                      filterListItem[index]
+                                                          .itemidgroup);
+                                            });
+                                          },
+                                          color: Colors.grey,
+                                          child: Text(
+                                            'Cancel',
+                                            style:
+                                                TextStyle(color: Colors.white),
+                                          ),
+                                        ),
+                                        SizedBox(
+                                          height: 5.0,
+                                        ),
+                                        Divider(color: Colors.black),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              )
+                            : Center(
+                                child: ListView(
+                                  shrinkWrap: true,
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 20.0, vertical: 10.0),
+                                  scrollDirection: Axis.vertical,
+                                  physics: NeverScrollableScrollPhysics(),
+                                  children: <Widget>[
+                                    Container(
+                                      height:
+                                          MediaQuery.of(context).size.height *
+                                              0.15,
+                                      child: Card(
+                                        elevation: 1.0,
+                                        margin: EdgeInsets.all(10.0),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(15.0),
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            'Data Tidak Tersedia. Silkan Pilih Item Terlebih Dahulu',
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                                color: Colors.black,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 22.0),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 20.0, vertical: 10.0),
+                          child: Column(
+                            children: [
+                              TextFormField(
+                                controller: vendorController,
+                                textAlign: TextAlign.left,
+                                keyboardType: TextInputType.text,
+                                decoration: InputDecoration(
+                                  border: OutlineInputBorder(),
+                                  hintText: 'Vendor',
+                                ),
+                                validator: (value) {
+                                  if (value.isEmpty) {
+                                    return "Please, isi text";
+                                  } else {
+                                    vendor = value;
+                                    return null;
+                                  }
+                                },
+                              ),
+                              SizedBox(
+                                height: 20.0,
+                              ),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceAround,
+                                children: [
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.max,
+                                    children: [
+                                      Align(
+                                        alignment: Alignment.topLeft,
+                                        child: Text(
+                                          'Pembayaran',
+                                          textAlign: TextAlign.left,
+                                          style: TextStyle(
+                                              fontFamily: "Quicksand",
+                                              fontSize: 16.0,
+                                              fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                      DropdownButton(
+                                        value: _currentPembayaran,
+                                        items: _dropDownMenuItems,
+                                        onChanged: changedDropDownItem,
+                                      )
+                                    ],
+                                  ),
+                                  Expanded(
+                                    child: Container(
+                                      padding: EdgeInsets.only(
+                                          top: 0,
+                                          left: 20.0,
+                                          right: 0.0,
+                                          bottom: 0.0),
+                                      child: InkWell(
+                                        onTap: () => _addImage(),
+                                        child: _image == null
+                                            ? Card(
+                                                child: IconButton(
+                                                    icon: Icon(Icons.add),
+                                                    onPressed: () =>
+                                                        _addImage()),
+                                              )
+                                            : Card(
+                                                clipBehavior: Clip.antiAlias,
+                                                child: Stack(
+                                                  children: <Widget>[
+                                                    Image.file(
+                                                      _image,
+                                                      width: 300,
+                                                      height: 300,
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(
+                                height: 20.0,
+                              ),
+                              TextFormField(
+                                controller: remarksController,
+                                textAlign: TextAlign.left,
+                                keyboardType: TextInputType.text,
+                                decoration: InputDecoration(
+                                  border: OutlineInputBorder(),
+                                  hintText: 'Remakrs',
+                                ),
+                                validator: (value) {
+                                  if (value.isEmpty) {
+                                    return "Please, isi text";
+                                  } else {
+                                    remarks = value;
+                                    return null;
+                                  }
+                                },
+                              ),
+                              SizedBox(
+                                height: 20.0,
+                              ),
+                              Padding(
+                                padding: EdgeInsets.symmetric(vertical: 10.0),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          'Total Amount',
+                                          style: TextStyle(
+                                              fontFamily: "Quicksand",
+                                              fontSize: 16.0,
+                                              fontWeight: FontWeight.bold),
+                                        ),
+                                        Text(
+                                          // 'Rp. 1.000.000.000.000.000.000',
+                                          'Rp. ${convertMoney.format(int.parse(getTotal()))}',
+                                          style: TextStyle(
+                                              fontFamily: "Quicksand",
+                                              fontSize: 20.0,
+                                              fontWeight: FontWeight.bold),
+                                        )
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Padding(
+                                padding: EdgeInsets.symmetric(vertical: 10.0),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceAround,
+                                  // mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    RaisedButton(
+                                      onPressed: () => _backBtn(),
+                                      color: Colors.grey,
+                                      child: Text(
+                                        'Cancel',
+                                        style: TextStyle(color: Colors.white),
+                                      ),
+                                    ),
+                                    RaisedButton(
+                                      onPressed: () {
+                                        if (!isPost) {
+                                          if (formKey.currentState.validate()) {
+                                            _postBuyProc();
+                                          } else {
+                                            setState(() {
+                                              autoValidate = true;
+                                            });
+                                          }
+                                        } else {
+                                          WidgetsBinding.instance
+                                              .addPostFrameCallback((_) async {
+                                            await showDialog<String>(
+                                              context: context,
+                                              builder: (BuildContext context) =>
+                                                  new AlertDialog(
+                                                title:
+                                                    new Text("Pemberitahuan"),
+                                                content: new Text(
+                                                    "Anda Sudah Buy..."),
+                                                actions: <Widget>[
+                                                  new FlatButton(
+                                                    child: new Text("Ok"),
+                                                    onPressed: () {
+                                                      Navigator.of(context).pushReplacement(
+                                                          PageRouteBuilder(
+                                                              pageBuilder: (_,
+                                                                      __,
+                                                                      ___) =>
+                                                                  SubmitProcPage(),
+                                                              transitionDuration:
+                                                                  Duration(
+                                                                      milliseconds:
+                                                                          750),
+
+                                                              /// Set animation with opacity
+                                                              transitionsBuilder: (_,
+                                                                  Animation<
+                                                                          double>
+                                                                      animation,
+                                                                  __,
+                                                                  Widget
+                                                                      child) {
+                                                                return Opacity(
+                                                                  opacity:
+                                                                      animation
+                                                                          .value,
+                                                                  child: child,
+                                                                );
+                                                              }));
+                                                    },
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          });
+                                        }
+                                      },
+                                      color: Colors.green,
+                                      child: Text(
+                                        isSubmit ? 'Processing' : 'Buy',
+                                        style: TextStyle(color: Colors.white),
+                                      ),
+                                    )
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
