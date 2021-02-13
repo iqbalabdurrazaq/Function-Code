@@ -1,3 +1,103 @@
+// responseHome = await Services().getDetailOrderHomeQc(widget.orderid);
+    // responseHold = await Services().getDetailOrderPickQc(widget.orderid);
+    // responsePending = await Services().getDetailOrderPendingQc(widget.orderid);
+    // responseConfrim = await Services().getDetailOrderConfrimQc(widget.orderid);
+    // if (responseHome.statusCode == 200) {
+    //   if (!mounted) return;
+    //   setState(() {
+    //     var tmpRes = jsonDecode(responseHome.body)['data'][0];
+    //     dataOrder = Dataorder.fromJson(tmpRes);
+    //     detailOrder = dataOrder.detailorder;
+    //     for (var i = 0; i < detailOrder.length; i++) {
+    //       if (dataOrder.pickstatus == 2 && dataOrder.shieldstatus == 2) {
+    //         detailOrder[i].qtyqc = detailOrder[i].qtyqcreject;
+    //       }
+    //     }
+    //     isLoading = true;
+    //   });
+    // } else if (responseHold.statusCode == 200) {
+    //   if (!mounted) return;
+    //   setState(() {
+    //     var tmpRes = jsonDecode(responseHold.body)['data'][0];
+    //     dataOrder = Dataorder.fromJson(tmpRes);
+    //     detailOrder = dataOrder.detailorder;
+    //     for (var i = 0; i < detailOrder.length; i++) {
+    //       if (dataOrder.pickstatus == 2 && dataOrder.shieldstatus == 2) {
+    //         detailOrder[i].qtyqc = detailOrder[i].qtyqcreject;
+    //       }
+    //     }
+    //     isLoading = true;
+    //   });
+    // } else if (responsePending.statusCode == 200) {
+    //   if (!mounted) return;
+    //   setState(() {
+    //     var tmpRes = jsonDecode(responsePending.body)['data'][0];
+    //     dataOrder = Dataorder.fromJson(tmpRes);
+    //     var tmpBoxed = dataOrder.boxed;
+    //     boxS = int.parse(tmpBoxed.split(",")[0]);
+    //     boxM = int.parse(tmpBoxed.split(",")[1]);
+    //     boxL = int.parse(tmpBoxed.split(",")[2]);
+    //     boxXL = int.parse(tmpBoxed.split(",")[3]);
+    //     detailOrder = dataOrder.detailorder;
+    //     for (var i = 0; i < detailOrder.length; i++) {
+    //       if (dataOrder.pickstatus == 2 && dataOrder.shieldstatus == 2) {
+    //         detailOrder[i].qtyqc = detailOrder[i].qtyqcreject;
+    //       }
+    //     }
+    //     isLoading = true;
+    //   });
+    // } else if (responseConfrim.statusCode == 200) {
+    //   if (!mounted) return;
+    //   setState(() {
+    //     var tmpRes = jsonDecode(responseConfrim.body)['data'][0];
+    //     dataOrder = Dataorder.fromJson(tmpRes);
+    //     var tmpBoxed = dataOrder.boxed;
+    //     boxS = int.parse(tmpBoxed.split(",")[0]);
+    //     boxM = int.parse(tmpBoxed.split(",")[1]);
+    //     boxL = int.parse(tmpBoxed.split(",")[2]);
+    //     boxXL = int.parse(tmpBoxed.split(",")[3]);
+    //     for (var i = 0; i < detailOrder.length; i++) {
+    //       if (dataOrder.pickstatus == 2 && dataOrder.shieldstatus == 2) {
+    //         detailOrder[i].qtyqc = detailOrder[i].qtyqcreject;
+    //       }
+    //     }
+    //     detailOrder = dataOrder.detailorder;
+    //     isLoading = true;
+    //   });
+    // } else if (responseHome.statusCode == 401 ||
+    //     responseHold.statusCode == 401 ||
+    //     responsePending.statusCode == 401 ||
+    //     responseConfrim.statusCode == 401) {
+    //   setState(() {
+    //     var body = jsonDecode(responseHome.body);
+    //     tmpMsg = body['success'];
+    //     tmpOrderid = body['orderid'];
+    //     tmpQc = body['qc'];
+    //     tmpQcat = body['qc_at'];
+    //     body['status'] == 1
+    //         ? tmpStatus = "Hold"
+    //         : body['status'] == 2
+    //             ? tmpStatus = "Pending"
+    //             : tmpStatus = "Confrim";
+    //     print(tmpMsg);
+    //     final snackBar = SnackBar(
+    //       content: Text("Order Sudah Di Pick"),
+    //       action: SnackBarAction(
+    //         label: 'Close',
+    //         textColor: Colors.white,
+    //         onPressed: () => Navigator.pushReplacement(
+    //           context,
+    //           new MaterialPageRoute(
+    //               builder: (context) => SideBarPage(selectPage: widget.menu)),
+    //         ),
+    //       ),
+    //       duration: new Duration(minutes: 30),
+    //       backgroundColor: Colors.red,
+    //     );
+    //     _scaffoldKey.currentState.showSnackBar(snackBar);
+    //   });
+    // }
+
 // SingleChildScrollView dataQc() {
   //   return SingleChildScrollView(
   //     scrollDirection: Axis.vertical,
