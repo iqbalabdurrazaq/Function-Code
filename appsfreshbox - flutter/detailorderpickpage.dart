@@ -1,3 +1,101 @@
+// if (widget.scan == 0) {
+// }
+    // else if (widget.scan == 1) {
+    //   responseHold = await Services().getDetailOrderPick(widget.orderid);
+    //   if (responseHold.statusCode == 200) {
+    //     if (!mounted) return;
+    //     setState(() {
+    //       var tmpRes = jsonDecode(responseHold.body)['data'][0];
+    //       dataOrder = Dataorder.fromJson(tmpRes);
+    //       detailOrder = dataOrder.detailorder;
+    //       for (var i = 0; i < detailOrder.length; i++) {
+    //         if (dataOrder.pickstatus == 2 && dataOrder.shieldstatus == 2) {
+    //           detailOrder[i].qtypicker = detailOrder[i].qtyqcreject;
+    //         }
+    //       }
+    //       isLoading = true;
+    //     });
+    //   } else if (responseHold.statusCode == 401) {
+    //     if (!mounted) return;
+    //     setState(() {
+    //       var body = jsonDecode(responseHome.body);
+    //       tmpMsg = body['success'];
+    //       tmpOrderid = body['orderid'];
+    //       tmpPicker = body['picker'];
+    //       tmpPickedat = body['picked_at'];
+    //       body['status'] == 1
+    //           ? tmpStatus = "Pick"
+    //           : body['status'] == 2
+    //               ? tmpStatus = "Pending"
+    //               : tmpStatus = "Confrim";
+    //       print(tmpMsg);
+    //       final snackBar = SnackBar(
+    //         content: Text("Order Sudah di Pick"),
+    //         action: SnackBarAction(
+    //           label: 'Close',
+    //           textColor: Colors.white,
+    //           onPressed: () => Navigator.pushReplacement(
+    //             context,
+    //             new MaterialPageRoute(
+    //                 builder: (context) => SideBarPage(selectPage: widget.menu)),
+    //           ),
+    //         ),
+    //         duration: new Duration(minutes: 5),
+    //         backgroundColor: Colors.red,
+    //       );
+    //       _scaffoldKey.currentState.showSnackBar(snackBar);
+    //     });
+    //   }
+    // } else {
+    //   responsePending = await Services().getDetailOrderPending(widget.orderid);
+    //   if (responsePending.statusCode == 200) {
+    //     if (!mounted) return;
+    //     setState(() {
+    //       var tmpRes = jsonDecode(responsePending.body)['data'][0];
+    //       dataOrder = Dataorder.fromJson(tmpRes);
+    //       detailOrder = dataOrder.detailorder;
+    //       for (var i = 0; i < detailOrder.length; i++) {
+    //         if (dataOrder.pickstatus == 2 && dataOrder.shieldstatus == 2) {
+    //           detailOrder[i].qtypicker = detailOrder[i].qtyqcreject;
+    //         }
+    //       }
+    //       isLoading = true;
+    //     });
+    //   } else if (responsePending.statusCode == 401) {
+    //     if (!mounted) return;
+    //     setState(() {
+    //       var body = jsonDecode(responseHome.body);
+    //       tmpMsg = body['success'];
+    //       tmpOrderid = body['orderid'];
+    //       tmpPicker = body['picker'];
+    //       tmpPickedat = body['picked_at'];
+    //       body['status'] == 1
+    //           ? tmpStatus = "Pick"
+    //           : body['status'] == 2
+    //               ? tmpStatus = "Pending"
+    //               : tmpStatus = "Confrim";
+    //       print(tmpMsg);
+    //       final snackBar = SnackBar(
+    //         content: Text("Order Sudah di Pick"),
+    //         action: SnackBarAction(
+    //           label: 'Close',
+    //           textColor: Colors.white,
+    //           onPressed: () => Navigator.pushReplacement(
+    //             context,
+    //             new MaterialPageRoute(
+    //                 builder: (context) => SideBarPage(selectPage: widget.menu)),
+    //           ),
+    //         ),
+    //         duration: new Duration(minutes: 5),
+    //         backgroundColor: Colors.red,
+    //       );
+    //       _scaffoldKey.currentState.showSnackBar(snackBar);
+    //     });
+    //   }
+    // }
+
+    // responseConfrim = await Services().getDetailOrderConfrim(widget.orderid);
+
 // SingleChildScrollView dataQc() {
   //   return SingleChildScrollView(
   //     scrollDirection: Axis.vertical,
